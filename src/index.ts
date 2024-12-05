@@ -87,7 +87,7 @@ export default {
       // Search ballerz with filters and pagination
       searchBallers: async ({
         filters,
-        limit = 10,
+        limit = 20,
         offset = 0,
       }: {
         filters: any;
