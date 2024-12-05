@@ -15,6 +15,17 @@ export interface Env {
   BALLERZ: KVNamespace;
 }
 
+let cachedData: any = null;
+
+// Helper function to fetch and cache the data
+const getCachedData = async (env: Env) => {
+  if (!cachedData) {
+    const data = await env.BALLERZ.get("ballerz");
+    cachedData = data ? JSON.parse(data) : [];
+  }
+  return cachedData;
+};
+
 const schema = buildSchema(`
   type Baller {
     id: ID!
@@ -56,10 +67,9 @@ const schema = buildSchema(`
     mvp: Boolean
   }
 
-
   type Query {
     getBaller(id: ID!): Baller
-    searchBallers(filters: BallerFilters): [Baller]
+    searchBallers(filters: BallerFilters, limit: Int, offset: Int): [Baller]
   }
 `);
 
@@ -68,32 +78,36 @@ export default {
     const root = {
       // Fetch a single baller by ID
       getBaller: async ({ id }: { id: string }) => {
-        const data = await env.BALLERZ.get("ballerz");
-        if (!data) return null;
-
-        const ballers = JSON.parse(data);
+        const ballers = await getCachedData(env);
         return (
           ballers.find((baller: any) => baller.id === parseInt(id, 10)) || null
         );
       },
 
-      // Search ballerz with filters
-      searchBallers: async ({ filters }: { filters: any }) => {
-        const data = await env.BALLERZ.get("ballerz");
-        if (!data) return [];
+      // Search ballerz with filters and pagination
+      searchBallers: async ({
+        filters,
+        limit = 10,
+        offset = 0,
+      }: {
+        filters: any;
+        limit: number;
+        offset: number;
+      }) => {
+        const ballers = await getCachedData(env);
 
-        const ballers = JSON.parse(data);
-
-        return ballers.filter((baller: any) => {
+        const filtered = ballers.filter((baller: any) => {
           if (filters.id && baller.id !== parseInt(filters.id, 10))
             return false;
-          if (filters.team && baller.team !== filters.team) return false;
+          if (filters.team && !baller.team.includes(filters.team)) return false; // Partial matching for team
           if (filters.overallMin && baller.overall < filters.overallMin)
             return false;
           if (filters.overallMax && baller.overall > filters.overallMax)
             return false;
           if (filters.role && baller.role !== filters.role) return false;
           if (filters.number && baller.number !== filters.number) return false;
+
+          // Accessories matching
           if (
             filters.accessories &&
             filters.accessories.length > 0 &&
@@ -103,11 +117,18 @@ export default {
           ) {
             return false;
           }
+
           if (filters.hair && baller.hair !== filters.hair) return false;
-          if (filters.hairColor && baller.hairColor !== filters.hairColor)
-            return false;
-          if (filters.hairStyle && baller.hairStyle !== filters.hairStyle)
-            return false;
+          if (
+            filters.hairColor &&
+            !baller.hairColor.includes(filters.hairColor)
+          )
+            return false; // Partial match
+          if (
+            filters.hairStyle &&
+            !baller.hairStyle.includes(filters.hairStyle)
+          )
+            return false; // Partial match
           if (filters.skillRank && baller.skillRank !== filters.skillRank)
             return false;
           if (filters.traitRank && baller.traitRank !== filters.traitRank)
@@ -118,6 +139,9 @@ export default {
 
           return true;
         });
+
+        // Apply pagination
+        return filtered.slice(offset, offset + limit);
       },
     };
 
