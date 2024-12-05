@@ -21,3 +21,53 @@ https://github.com/benyarb/ballerz-graph/blob/5208e09c4ab2308be00d02c8e69aa986da
 
 ## deploy
 `wrangler deploy`
+
+## url
+URL: [http://ballerz.cloud/graphql](http://ballerz.cloud/graphql)
+
+## example queries
+
+1. Fetch a Single Baller
+```graphql
+query {
+  getBaller(id: 2185) {
+    id
+    team
+    overall
+    role
+  }
+}
+```
+
+2. Search with Filters and Pagination
+```graphql
+query {
+  searchBallers(filters: { team: "Flow", overallMin: 75 }, limit: 10, offset: 0) {
+    id
+    team
+    overall
+    role
+  }
+}
+```
+
+
+## example curl
+
+1. Fetch a Single Baller
+```bash
+curl -X POST https://ballerz.cloud/graphql \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "query { getBaller(id: 2185) { id team overall role } }"
+  }'
+```
+
+2. Search with Filters
+```bash
+curl -X POST https://ballerz.cloud/graphql \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "query { searchBallers(filters: { team: \"Flow\", overallMin: 75 }, limit: 10, offset: 0) { id team overall role } }"
+  }'
+```
