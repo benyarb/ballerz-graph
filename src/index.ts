@@ -8,11 +8,11 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-import { graphql, buildSchema } from 'graphql';
+import { graphql, buildSchema } from "graphql";
 
 export interface Env {
-	// Binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	BALLER: KVNamespace;
+  // Binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
+  BALLER: KVNamespace;
 }
 
 const schema = buildSchema(`
@@ -53,16 +53,45 @@ export default {
       },
       searchBallers: async ({ filters }: { filters: any }) => {
         const allKeys = await env.BALLER.list();
-        const results = await Promise.all(
-          allKeys.keys.map(async (key) => JSON.parse(await env.BALLER.get(key.name) || '{}'))
+        const allBallers = await Promise.all(
+          allKeys.keys.map(async (key) => {
+            const baller = await env.BALLER.get(key.name);
+            return baller ? JSON.parse(baller) : null;
+          })
         );
-        return results.filter((baller) => {
-          // Apply filters here
-          return filters.team ? baller.team === filters.team : true;
+
+        // Filter results
+        return allBallers.filter((baller) => {
+          if (!baller) return false;
+
+          // Filter by team
+          if (filters.team && baller.team !== filters.team) return false;
+
+          // Filter by overall range
+          if (filters.overallMin && baller.overall < filters.overallMin)
+            return false;
+          if (filters.overallMax && baller.overall > filters.overallMax)
+            return false;
+
+          // Filter by role
+          if (filters.role && baller.role !== filters.role) return false;
+
+          // Filter by accessories
+          if (
+            filters.accessories &&
+            filters.accessories.length > 0 &&
+            !filters.accessories.every((acc: string) =>
+              baller.accessories.includes(acc)
+            )
+          ) {
+            return false;
+          }
+
+          return true;
         });
       },
     };
-    
+
     const body: any = await request.json();
 
     const response = await graphql({
@@ -75,8 +104,7 @@ export default {
 
     return new Response(JSON.stringify(response), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   },
 };
-
