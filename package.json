@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {
-    "put": "wrangler kv:bulk put --namespace-id ec2bd233d0b14daaa6fa8b9b9df285b0 ./data/ballerKV.json",
+    "put": "wrangler kv key put ballerz --namespace-id 997beb16038f489a946f4bf0b8122252 --path ./data/ballerz.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
