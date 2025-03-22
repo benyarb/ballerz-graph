@@ -41,13 +41,18 @@ query {
 2. Search with Filters and Pagination
 ```graphql
 query {
-  searchBallers(filters: { team: "Flow", overallMin: 75 }, limit: 10, offset: 0) {
+  searchBallers(
+    filters: { team: "Flow", overallMin: 75 }
+    limit: 10
+    offset: 0
+  ) {
     id
     team
     overall
     role
   }
 }
+
 ```
 
 
