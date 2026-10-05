@@ -1,11 +1,13 @@
 name = "ballerz-graph"
 main = "src/index.ts"
-compatibility_date = "2024-12-04"
+compatibility_date = "2026-10-01"
+workers_dev = false
+routes = [{ pattern = "ballerz.cloud/graphql*", zone_name = "ballerz.cloud" }]
 
 [[kv_namespaces]]
-binding = "BALLERZ" # Matches the script's KVNamespace
+binding = "BALLERZ"
 id = "997beb16038f489a946f4bf0b8122252"
 preview_id = "84a56abe24d84240847cb57cd4e3a2fa"
 
-[observability.logs]
+[observability]
 enabled = true

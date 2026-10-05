@@ -26,6 +26,20 @@ const getCachedData = async (env: Env) => {
   return cachedData;
 };
 
+const MAX_LIMIT = 1000;
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+  });
+
 const schema = buildSchema(`
   type Baller {
     id: ID!
@@ -75,6 +89,13 @@ const schema = buildSchema(`
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+    if (request.method !== "POST") {
+      return jsonResponse({ errors: [{ message: "Use POST with a JSON body containing a GraphQL query" }] }, 405);
+    }
+
     const root = {
       // Fetch a single baller by ID
       getBaller: async ({ id }: { id: string }) => {
@@ -86,7 +107,7 @@ export default {
 
       // Search ballerz with filters and pagination
       searchBallers: async ({
-        filters,
+        filters = {},
         limit = 20,
         offset = 0,
       }: {
@@ -141,11 +162,20 @@ export default {
         });
 
         // Apply pagination
-        return filtered.slice(offset, offset + limit);
+        const start = Math.max(0, offset);
+        return filtered.slice(start, start + Math.min(Math.max(0, limit), MAX_LIMIT));
       },
     };
 
-    const body: any = await request.json();
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return jsonResponse({ errors: [{ message: "Request body must be JSON" }] }, 400);
+    }
+    if (typeof body?.query !== "string") {
+      return jsonResponse({ errors: [{ message: "Missing GraphQL query" }] }, 400);
+    }
 
     const response = await graphql({
       schema,
@@ -155,9 +185,6 @@ export default {
       contextValue: {},
     });
 
-    return new Response(JSON.stringify(response), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse(response);
   },
 };
